@@ -116,11 +116,11 @@
   };
 
   var MAPS = [
-    { id: 'wealth', n: 'Map 01', tab: 'Wealth', question: 'Who is rich and who is poor?', views: ['wealth'],
+    { id: 'wealth', n: '#30DayMapChallenge', tab: 'Wealth', question: 'Who is rich and who is poor?', views: ['wealth'],
       ramp: TEAL },
-    { id: 'emissions', n: 'Map 02', tab: 'Emissions', question: 'Who contributes most to climate change?', views: ['annual', 'cumulative'],
+    { id: 'emissions', n: '#30DayMapChallenge', tab: 'Emissions', question: 'Who contributes most to climate change?', views: ['annual', 'cumulative'],
       ramp: CARBON },
-    { id: 'adaptation', n: 'Map 03', tab: 'Adaptation', question: 'Who can afford to adapt to climate change?', views: ['adapt'],
+    { id: 'adaptation', n: '#30DayMapChallenge', tab: 'Adaptation', question: 'Who can afford to adapt to climate change?', views: ['adapt'],
       ramp: [BIV[2][0], BIV[1][0], BIV[0][0], BIV[0][1], BIV[0][2], BIV[1][2], BIV[2][2]] }
   ];
 

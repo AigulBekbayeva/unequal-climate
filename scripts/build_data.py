@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Build data/countries.js and data/countries.csv for the three maps.
+
+Usage:
+    python3 scripts/build_data.py <owid-co2-data.csv> <nd-gain resources dir> <world-countries.json>
+
+Inputs
+  * owid-co2-data.csv      https://github.com/owid/co2-data  (Global Carbon Budget via Our World in Data)
+  * ND-GAIN "resources"    unzipped ND-GAIN Country Index download, https://gain.nd.edu/our-work/country-index/download-data/
+  * world-countries.json   https://github.com/mledoze/countries (region names only)
+"""
+import csv, json, sys, os
+
+owid_path, gain_dir, wc_path = sys.argv[1:4]
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data")
+
+CO2_YEAR = "2025"
+GAIN_YEAR = "2023"
+
+def gain_table(rel):
+    with open(os.path.join(gain_dir, rel), newline="", encoding="utf-8") as f:
+        return {r["ISO3"]: r for r in csv.DictReader(f)}
+
+def num(v):
+    try:
+        x = float(v)
+        return x if x == x else None
+    except (TypeError, ValueError):
+        return None
+
+vul = gain_table("vulnerability/vulnerability.csv")
+gdp = gain_table("indicators/gdp/raw.csv")
+
+regions = {}
+for c in json.load(open(wc_path, encoding="utf-8")):
+    regions[c["cca3"]] = (c.get("region") or "", c.get("subregion") or "")
+
+RENAME = {
+    "Micronesia (country)": "Micronesia",
+    "Sint Maarten (Dutch part)": "Sint Maarten",
+    "Cote d'Ivoire": "Côte d'Ivoire",
+    "Curacao": "Curaçao",
+    "Reunion": "Réunion",
+    "Sao Tome and Principe": "São Tomé and Príncipe",
+    "East Timor": "Timor-Leste",
+    "Democratic Republic of Congo": "DR Congo",
+}
+
+GROUPS = {
+    "High-income countries": "high",
+    "Upper-middle-income countries": "upper_middle",
+    "Lower-middle-income countries": "lower_middle",
+    "Low-income countries": "low",
+}
+
+out = {}
+world = {}
+groups = {}
+with open(owid_path, newline="", encoding="utf-8") as f:
+    for r in csv.DictReader(f):
+        if r["year"] != CO2_YEAR:
+            continue
+        if r["country"] in GROUPS:
+            groups[GROUPS[r["country"]]] = {
+                "pop": num(r["population"]),
+                "co2_pc": num(r["co2_per_capita"]),
+                "co2_cum_share": num(r["share_global_cumulative_co2"]),
+            }
+        if r["country"] == "World":
+            world = {
+                "co2_pc": num(r["co2_per_capita"]),
+                "co2_cum_mt": num(r["cumulative_co2"]),
+                "pop": num(r["population"]),
+            }
+        iso = r["iso_code"]
+        if not iso or len(iso) != 3:
+            continue
+        pop = num(r["population"])
+        cum = num(r["cumulative_co2"])
+        out[iso] = {
+            "iso": iso,
+            "name": RENAME.get(r["country"], r["country"]),
+            "pop": int(pop) if pop else None,
+            "co2_pc": num(r["co2_per_capita"]),
+            "co2_cum_mt": cum,
+            "co2_cum_pc": (cum * 1e6 / pop) if (cum is not None and pop) else None,
+            "co2_cum_share": num(r["share_global_cumulative_co2"]),
+        }
+
+for iso in set(vul) | set(gdp):
+    d = out.setdefault(iso, {"iso": iso, "name": (vul.get(iso) or gdp.get(iso))["Name"]})
+    # GDP per capita: 2023 where available, otherwise the latest of 2021-2022
+    d["gdp_pc"], d["gdp_year"] = None, None
+    for y in (GAIN_YEAR, "2022", "2021"):
+        v = num(gdp.get(iso, {}).get(y))
+        if v is not None:
+            d["gdp_pc"], d["gdp_year"] = v, int(y)
+            break
+    d["vuln"] = num(vul.get(iso, {}).get(GAIN_YEAR))
+
+FIELDS = ["iso", "name", "region", "subregion", "pop", "gdp_pc", "gdp_year", "co2_pc", "co2_cum_pc",
+          "co2_cum_mt", "co2_cum_share", "vuln"]
+ROUND = {"gdp_pc": 0, "co2_pc": 2, "co2_cum_pc": 1, "co2_cum_mt": 1, "co2_cum_share": 3,
+         "vuln": 3}
+
+rows = []
+for iso in sorted(out):
+    d = out[iso]
+    d["region"], d["subregion"] = regions.get(iso, ("", ""))
+    row = {}
+    for k in FIELDS:
+        v = d.get(k)
+        if v is not None and k in ROUND:
+            v = round(v, ROUND[k])
+            if ROUND[k] == 0:
+                v = int(v)
+        row[k] = v
+    rows.append(row)
+
+world["co2_cum_pc"] = round(world["co2_cum_mt"] * 1e6 / world["pop"], 1)
+meta = {
+    "co2_year": int(CO2_YEAR),
+    "gdp_year": int(GAIN_YEAR),
+    "gain_year": int(GAIN_YEAR),
+    "world": world,
+    # World Bank income groups as aggregated by Our World in Data
+    "income_groups": {
+        k: {"pop_share": round(100 * v["pop"] / world["pop"], 1),
+            "co2_pc": round(v["co2_pc"], 2),
+            "co2_cum_share": round(v["co2_cum_share"], 1)}
+        for k, v in groups.items()
+    },
+}
+
+with open(os.path.join(OUT, "countries.csv"), "w", newline="", encoding="utf-8") as f:
+    w = csv.DictWriter(f, fieldnames=FIELDS)
+    w.writeheader()
+    for r in rows:
+        w.writerow({k: ("" if v is None else v) for k, v in r.items()})
+
+with open(os.path.join(OUT, "countries.js"), "w", encoding="utf-8") as f:
+    f.write("// Generated by scripts/build_data.py - do not edit by hand\n")
+    f.write("window.MAP_META = " + json.dumps(meta, ensure_ascii=False) + ";\n")
+    f.write("window.MAP_DATA = " + json.dumps(rows, ensure_ascii=False, separators=(",", ":")) + ";\n")
+
+print(len(rows), "countries/territories written;", meta)

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Unequal Climate: three maps of wealth, emissions and adaptation</title>
+<meta name="description" content="Three interactive world maps: GDP per capita, CO2 emissions per person today and since 1750, and which countries can afford to adapt to climate change.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23132a33'/%3E%3Crect x='3' y='3' width='5' height='5' fill='%23be64ac'/%3E%3Crect x='8' y='3' width='5' height='5' fill='%233b4994'/%3E%3Crect x='3' y='8' width='5' height='5' fill='%23e8e8e8'/%3E%3Crect x='8' y='8' width='5' height='5' fill='%235ac8c8'/%3E%3C/svg%3E">
+<link rel="preload" href="fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div class="app">
+
+  <header class="head">
+    <div class="masthead">
+      <h1 class="site-title">Unequal Climate</h1>
+      <p class="site-sub">Three maps on who has the money, who put the carbon in the air, and who can pay to adapt.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Choose a map" id="tabs"></div>
+  </header>
+
+  <main class="stage">
+    <div class="mapwrap" id="mapwrap">
+      <label class="search">
+        <span class="search-label">Find a country</span>
+        <input id="search" type="search" list="country-list" placeholder="Type a name" autocomplete="off" spellcheck="false">
+        <datalist id="country-list"></datalist>
+      </label>
+
+      <svg id="map" role="img" aria-labelledby="map-title map-desc">
+        <title id="map-title">World map</title>
+        <desc id="map-desc"></desc>
+      </svg>
+
+      <div class="zoom" role="group" aria-label="Map zoom">
+        <button type="button" id="zoom-in" aria-label="Zoom in">+</button>
+        <button type="button" id="zoom-out" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="zoom-reset" class="zoom-reset">Reset view</button>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="legend" id="legend"></div>
+      <p class="credit" id="credit"></p>
+    </div>
+  </main>
+
+  <section class="story" id="story" role="tabpanel" tabindex="-1" aria-live="polite">
+    <h2 class="question" id="question"></h2>
+    <p class="indicator" id="indicator"></p>
+
+    <div class="layers" id="layers" role="group" aria-label="What the map shows" hidden></div>
+
+    <div class="lead" id="lead"></div>
+
+    <div class="country" id="country"></div>
+
+    <div class="ranks" id="ranks"></div>
+
+    <details class="method" id="method">
+      <summary>Data and method</summary>
+      <div id="method-body"></div>
+    </details>
+
+    <footer class="foot">
+      <a href="data/countries.csv" download>Download the data (CSV)</a>
+      <span>Boundaries: Natural Earth, 1:50m. Equal Earth projection.</span>
+    </footer>
+  </section>
+
+</div>
+
+<div class="tooltip" id="tooltip" role="status" hidden></div>
+
+<noscript><p style="padding:24px">These maps need JavaScript. The underlying table is in <a href="data/countries.csv">data/countries.csv</a>.</p></noscript>
+
+<script src="js/vendor/d3.min.js"></script>
+<script src="js/vendor/topojson-client.min.js"></script>
+<script src="data/world.js"></script>
+<script src="data/countries.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
